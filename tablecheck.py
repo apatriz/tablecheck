@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
-import arcpy,os
-from openpyxl import load_workbook
+import arcpy,os, csv
 
 EXCEL_FILE = r"C:\Users\patrizio\Projects\Monroe_Signs\test\Lookup_Table"
 
