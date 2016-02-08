@@ -6,7 +6,7 @@ from openpyxl.utils import column_index_from_string
 
 EXCEL_FILE = r"C:\Users\patrizio\Projects\Monroe_Signs\test\Lookup_Table.xlsx"
 FIELD_NAME_RANGE = "A1:S1"
-ID_COLUMN = "B"
+ID_COLUMN = "A"
 
 DATABASE_TABLE = r"C:\Users\patrizio\Projects\Monroe_Signs\test\Monroe_Signs.gdb\Signs"
 FIELD_MAP = {"SignType":"Descrip",
@@ -73,27 +73,42 @@ def load_dict(filename,headers,key_id):
         index = 0
         entry = {}     
         for cell in row:
-            entry[headers[index]] = cell.value
+            try:
+                val = cell.value.strip()
+            except AttributeError:
+                val = cell.value
+            entry[headers[index]] = val
             index += 1
         res[row[key_id].value] = entry        
     return res
 
 def check_arc_table(filename,id_field_name,field_map,lookup_table):
-    fields = [field.name for field in arcpy.ListFields(filename) if field.name in field_map.values()]
+    fields = [field.name for field in arcpy.ListFields(filename) if field.name in field_map]
+    print fields
     with arcpy.da.UpdateCursor(filename,fields) as cursor:
         for row in cursor:
             index = 0
+            new_row = []
             for cell in row:
                 if fields[index] == id_field_name and cell:
                     lookup_id = cell
                     print lookup_id
                 elif fields[index] == id_field_name and not cell:
+                    new_row = row
                     break
-                if not cell:  
-                    lookup_value = field_map[cursor.fields[index]]                 
-                    cell = lookup_table[lookup_id][lookup_value]
+                if not cell and lookup_id in lookup_table:  
+                    lookup_value = field_map[cursor.fields[index]]
+                    print "Lookup_value:{0}".format(lookup_value)
+                    if lookup_table[lookup_id][lookup_value]:
+                        cell = lookup_table[lookup_id][lookup_value]
+                        print "Adding value {0} to cell".format(cell)
+                new_row.append(cell)
                 index += 1
-            cursor.updateRow(row)
+            new_row = tuple(new_row)
+            print new_row
+            cursor.updateRow(new_row)
+                
+                
                 
         
               
