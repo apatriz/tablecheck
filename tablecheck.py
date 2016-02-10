@@ -9,7 +9,7 @@ generated from and Excel .xlsx file).
 
 import arcpy,os
 from openpyxl import load_workbook
-from openpyxl.utils import column_index_from_string
+from openpyxl.utils import column_index_from_string,get_column_letter
 
 ###BEGIN PARAMETER INPUT#############################
 
@@ -25,6 +25,9 @@ ID_COLUMN = "A"
 
 # Set the database table that will be updated
 DATABASE_TABLE = r"C:\Users\patrizio\Projects\Monroe_Signs\test\data_v2\Monroe_Signs.gdb\Signs"
+
+#Set the database foreign key field name corresponding to the lookup table id
+FOREIGN_KEY = "SignType"
 
 # Set the field map.
 # Maps the field name in the database table to the header in the lookup table. This
@@ -56,12 +59,9 @@ def convertindex(func):
     def minus_one(index_string):
         return func(index_string) - 1
     return minus_one
-get_index = convertindex(column_index_from_string)
 
 
-# TODO: Add functionality to return foreign key field name, as well as list of headers (in tuple)
-
-def get_headers(filename,id_column,field_range):
+def get_headers(filename,field_range):
     """
     Input:
     filename -> path to excel file
@@ -79,10 +79,12 @@ def get_headers(filename,id_column,field_range):
     return headers
 
 
-def load_dict(filename,headers,id_column):
+def load_dict(filename,field_range,id_column):
     wb = load_workbook(filename=filename,read_only=True)
     ws = wb.active
     res = {}
+    get_index = convertindex(column_index_from_string)
+    headers = get_headers(filename,field_range)
     for row in ws.iter_rows(row_offset=1):
         index = 0
         entry = {}
@@ -93,19 +95,20 @@ def load_dict(filename,headers,id_column):
                 val = cell.value
             entry[headers[index]] = val
             index += 1
-        res[row[id_column].value] = entry
+        res[row[get_index(id_column)].value] = entry
     return res
 
-def check_arc_table(filename,id_field_name,field_map,lookup_table):
+
+def check_arc_table(filename,foreign_key,field_map,lookup_table):
     fields = [field.name for field in arcpy.ListFields(filename) if field.name in field_map]
     with arcpy.da.UpdateCursor(filename,fields) as cursor:
         for row in cursor:
             index = 0
             new_row = []
             for cell in row:
-                if fields[index] == id_field_name and cell:
+                if fields[index] == foreign_key and cell:
                     lookup_id = cell
-                elif fields[index] == id_field_name and not cell:
+                elif fields[index] == foreign_key and not cell:
                     new_row = row
                     break
                 if not cell and lookup_id in lookup_table:
@@ -120,38 +123,32 @@ def check_arc_table(filename,id_field_name,field_map,lookup_table):
     return os.path.abspath(filename)
 
 
+def test_tablecheck(test_entries):
+    
+    lookup_table = load_dict(EXCEL_FILE,FIELD_NAME_RANGE,ID_COLUMN)
+    
+    for i in test_entries:
+        assert lookup_table[i] == test_entries[i] 
+    print "Test complete."
 
 
 if __name__ == "__main__":
-    headers = get_headers(EXCEL_FILE,ID_COLUMN,FIELD_NAME_RANGE)
-    assert headers == [u'Code', u'Descrip', u'Collect', u'DimWidth', u'DimHeight', u'LegendColor1',
-                       u'LegendColor2', u'LegendColor3',
-                       u'SheetingColor1', u'SheetingColor2',
-                       u'RegPkRestrType1', u'RegPkRestrType2',
-                       u'RegPkTimeLimit1', u'RegPkTimeLimit2',
-                       u'RegPkArrow1', u'RegPkTimeYear1', u'RegPkTimeYear2',
-                       u'RegPkVehExceptions1', u'RegPkVehExceptions2']
-    assert len(headers) == 19
-    id_column = get_index(ID_COLUMN)
-    lookup_table = load_dict(EXCEL_FILE,headers,id_column)
-    assert lookup_table["D4-3"] == {u'Code': u'D4-3', u'SheetingColor2': None,
-                                    u'RegPkVehExceptions1': None, u'DimHeight': 18L,
-                                    u'SheetingColor1': u'White', u'LegendColor1': u'Green',
-                                    u'LegendColor2': None, u'LegendColor3': None, u'RegPkRestrType2': None,
-                                    u'RegPkRestrType1': None, u'RegPkTimeLimit2': None, u'Collect': u'LiDAR',
-                                    u'RegPkTimeLimit1': None, u'RegPkVehExceptions2': None, u'RegPkArrow1': None,
-                                    u'Descrip': u'Bike Parking: D4-3', u'RegPkTimeYear1': None, u'RegPkTimeYear2': None, u'DimWidth': 12L}
 
-
-    assert lookup_table["W1-2aL"] == {u'Code': u'W1-2aL', u'SheetingColor2': None, u'RegPkVehExceptions1': None,
-                                     u'DimHeight': 30L, u'SheetingColor1': u'Yellow', u'LegendColor1': u'Black',
-                                     u'LegendColor2': None, u'LegendColor3': None, u'RegPkRestrType2': None,
-                                     u'RegPkRestrType1': None, u'RegPkTimeLimit2': None, u'Collect': u'LiDAR',
-                                     u'RegPkTimeLimit1': None, u'RegPkVehExceptions2': None,
-                                     u'RegPkArrow1': None, u'Descrip': u'Curve Left: W1-2aL',
-                                     u'RegPkTimeYear1': None, u'RegPkTimeYear2': None, u'DimWidth': 30L}
-    
-
-    check_arc_table(DATABASE_TABLE,"SignType",FIELD_MAP,lookup_table)
+##    print test_tablecheck({"D4-3":{u'Code': u'D4-3', u'SheetingColor2': None,
+##                                        u'RegPkVehExceptions1': None, u'DimHeight': 18L,
+##                                        u'SheetingColor1': u'White', u'LegendColor1': u'Green',
+##                                        u'LegendColor2': None, u'LegendColor3': None, u'RegPkRestrType2': None,
+##                                        u'RegPkRestrType1': None, u'RegPkTimeLimit2': None, u'Collect': u'LiDAR',
+##                                        u'RegPkTimeLimit1': None, u'RegPkVehExceptions2': None, u'RegPkArrow1': None,
+##                                        u'Descrip': u'Bike Parking: D4-3', u'RegPkTimeYear1': None, u'RegPkTimeYear2': None, u'DimWidth': 12L},
+##                          "W1-2aL":{u'Code': u'W1-2aL', u'SheetingColor2': None, u'RegPkVehExceptions1': None,
+##                                     u'DimHeight': 30L, u'SheetingColor1': u'Yellow', u'LegendColor1': u'Black',
+##                                     u'LegendColor2': None, u'LegendColor3': None, u'RegPkRestrType2': None,
+##                                     u'RegPkRestrType1': None, u'RegPkTimeLimit2': None, u'Collect': u'LiDAR',
+##                                     u'RegPkTimeLimit1': None, u'RegPkVehExceptions2': None,
+##                                     u'RegPkArrow1': None, u'Descrip': u'Curve Left: W1-2aL',
+##                                     u'RegPkTimeYear1': None, u'RegPkTimeYear2': None, u'DimWidth': 30L}})
+    lookup_table = load_dict(EXCEL_FILE,FIELD_NAME_RANGE,ID_COLUMN)
+    check_arc_table(DATABASE_TABLE,FOREIGN_KEY,FIELD_MAP,lookup_table)
 
 
