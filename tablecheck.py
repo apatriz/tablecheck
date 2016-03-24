@@ -3,7 +3,7 @@
 """
 This script can be used to update a database table in Arc. The script
 will fill in the database records with missing values based on the lookup table (
-generated from and Excel .xlsx file).
+generated from an Excel .xlsx file).
 
 """
 
@@ -99,7 +99,7 @@ def load_dict(filename,field_range,id_column):
     return res
 
 
-def check_arc_table(filename,foreign_key,field_map,lookup_table):
+def update_arc_table(filename,foreign_key,field_map,lookup_table):
     fields = [field.name for field in arcpy.ListFields(filename) if field.name in field_map]
     with arcpy.da.UpdateCursor(filename,fields) as cursor:
         for row in cursor:
@@ -149,6 +149,6 @@ if __name__ == "__main__":
 ##                                     u'RegPkArrow1': None, u'Descrip': u'Curve Left: W1-2aL',
 ##                                     u'RegPkTimeYear1': None, u'RegPkTimeYear2': None, u'DimWidth': 30L}})
     lookup_table = load_dict(EXCEL_FILE,FIELD_NAME_RANGE,ID_COLUMN)
-    check_arc_table(DATABASE_TABLE,FOREIGN_KEY,FIELD_MAP,lookup_table)
+    update_arc_table(DATABASE_TABLE,FOREIGN_KEY,FIELD_MAP,lookup_table)
 
 
