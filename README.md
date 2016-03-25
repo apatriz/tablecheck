@@ -15,5 +15,5 @@ where /path/to/requirements.txt is the location of the requirements.txt file. Th
 1. Ensure all parameters are filled out correctly in tablecheck.py
 2. Run the script from the command line by navigating to the script directory and then executing with:
 
-`python tablecheck.py`
+	`python tablecheck.py`
 
