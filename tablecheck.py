@@ -98,7 +98,8 @@ def load_dict(filename,field_range,id_column):
         res[row[get_index(id_column)].value] = entry
     return res
 
-
+# TODO: put in check for sheeting color/label category. if any of those fields has a value,
+# the other fields in those categories should not be populated, even if they have no value
 def update_arc_table(filename,foreign_key,field_map,lookup_table):
     fields = [field.name for field in arcpy.ListFields(filename) if field.name in field_map]
     with arcpy.da.UpdateCursor(filename,fields) as cursor:
