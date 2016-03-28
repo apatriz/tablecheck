@@ -10,11 +10,12 @@ generated from an Excel .xlsx file).
 import arcpy,os
 from openpyxl import load_workbook
 from openpyxl.utils import column_index_from_string,get_column_letter
+from collections import OrderedDict
 
 ###BEGIN PARAMETER INPUT#############################
 
 # Set the Excel file to use as a lookup table
-EXCEL_FILE = r"C:\Users\patrizio\Projects\Monroe_Signs\test\data_v2\Lookup_Table.xlsx"
+EXCEL_FILE = r"C:\Users\patrizio\Projects\Monroe_Signs\test\data_v3\Lookup_Table.xlsx"
 
 # Set the Excel table range to extract the table header names.
 # The header names should be equivalent to the field names of the database table (but do not need to have the same name)
@@ -24,7 +25,7 @@ FIELD_NAME_RANGE = "A1:S1"
 ID_COLUMN = "A"
 
 # Set the database table that will be updated
-DATABASE_TABLE = r"C:\Users\patrizio\Projects\Monroe_Signs\test\data_v2\Monroe_Signs.gdb\Signs"
+DATABASE_TABLE = r"C:\Users\patrizio\Projects\Monroe_Signs\test\data_v3\Monroe_Signs.gdb\Signs"
 
 #Set the database foreign key field name corresponding to the lookup table id
 FOREIGN_KEY = "SignType"
@@ -98,6 +99,42 @@ def load_dict(filename,field_range,id_column):
         res[row[get_index(id_column)].value] = entry
     return res
 
+def convert_null_to_none(filename,field_map):
+    fields = [field.name for field in arcpy.ListFields(filename) if field.name in field_map]
+    with arcpy.da.UpdateCursor(filename,fields) as cursor:
+        for row in cursor:
+            new_row = []
+            for cell in row:
+                if "Null" in str(cell):
+                    cell = None
+                else:
+                    cell = cell
+                new_row.append(cell)
+            cursor.updateRow(new_row)
+
+def check_row_exceptions(row_dict,exception_field):
+    result = []
+    for field in row_dict:
+        if exception_field in field:
+            result.append(row_dict[field])
+    return result
+
+        
+def fill_cell(value_list):
+    for i in value_list:
+        if i != None:
+            return False
+    return True
+
+def lookup_value(lookup_id, lookup_table, field_map, fieldname):
+
+    # use the field map to convert the database table field to the equivalent lookup table field
+    lookup_field = field_map[fieldname]          
+    # check if the lookup table contains a record for that id and field
+    if lookup_table[lookup_id][lookup_field]:
+        # set the new cell value to the matching lookup table record
+        return lookup_table[lookup_id][lookup_field]
+                
 # TODO: put in check for sheeting color/label category. if any of those fields has a value,
 # the other fields in those categories should not be populated, even if they have no value
 def update_arc_table(filename,foreign_key,field_map,lookup_table):
@@ -107,8 +144,39 @@ def update_arc_table(filename,foreign_key,field_map,lookup_table):
             # initialize index to keep track of field position
             index = 0
             # initialize the row to hold the row values
-            new_row = []
+            new_row = OrderedDict()
+            sheeting_color = []
+            legend_color = []
             for cell in row:
+                ### NEW LOGIC START ###
+                new_row[fields[index]] = cell
+                index += 1
+
+            if foreign_key in new_row and new_row[foreign_key]:
+                lookup_id = new_row[foreign_key]
+            else:
+                continue
+            sheet_color = check_row_exceptions(new_row,"SheetColor")
+            legend_color = check_row_exceptions(new_row, "LegendColor")
+
+            # if both categories pass test, fill all cells regardless
+            if fill_cell(sheet_color) and fill_cell(legend_color):
+                for field in new_row:
+                    if not new_row[field] and lookup_id in lookup_table:
+                        cell = lookup_value(lookup_id, lookup_table, field_map, field)
+                        new_row[field] = cell
+                        
+            # other conditions...
+            elif
+                        
+                        
+                        
+                
+                
+                
+                
+
+                ### OLD LOGIC START ###
                 # loop through each column in the row until finding the foreign key id
                 if fields[index] == foreign_key and cell:
                     # set the value of the foreign key id. 
@@ -118,10 +186,16 @@ def update_arc_table(filename,foreign_key,field_map,lookup_table):
                     # row will not be updated
                     new_row = row
                     break
+                if "SheetColor" in fields[index]:
+                    sheeting_color.append(cell)
+                if "LegendColor" in fields[index]:
+                    legend_color.append(cell)
+                    
+                    
                 # when finding a blank cell, and the lookup id (foreign key) is in the lookup table,
                 if not cell and lookup_id in lookup_table:
                     # use the field map to convert the database table field to the equivalent lookup table field
-                    lookup_field = field_map[cursor.fields[index]]
+                    lookup_field = field_map[cursor.fields[index]]          
                     # check if the lookup table contains a record for that id and field
                     if lookup_table[lookup_id][lookup_field]:
                         # set the new cell value to the matching lookup table record
@@ -146,7 +220,9 @@ def test_tablecheck(test_entries):
 
 if __name__ == "__main__":
 
-##    print test_tablecheck({"D4-3":{u'Code': u'D4-3', u'SheetingColor2': None,
+##    convert_null_to_none(DATABASE_TABLE,FIELD_MAP)
+##
+##    test_tablecheck({"D4-3":{u'Code': u'D4-3', u'SheetingColor2': None,
 ##                                        u'RegPkVehExceptions1': None, u'DimHeight': 18L,
 ##                                        u'SheetingColor1': u'White', u'LegendColor1': u'Green',
 ##                                        u'LegendColor2': None, u'LegendColor3': None, u'RegPkRestrType2': None,
@@ -160,7 +236,7 @@ if __name__ == "__main__":
 ##                                     u'RegPkTimeLimit1': None, u'RegPkVehExceptions2': None,
 ##                                     u'RegPkArrow1': None, u'Descrip': u'Curve Left: W1-2aL',
 ##                                     u'RegPkTimeYear1': None, u'RegPkTimeYear2': None, u'DimWidth': 30L}})
-    lookup_table = load_dict(EXCEL_FILE,FIELD_NAME_RANGE,ID_COLUMN)
-    update_arc_table(DATABASE_TABLE,FOREIGN_KEY,FIELD_MAP,lookup_table)
+##    lookup_table = load_dict(EXCEL_FILE,FIELD_NAME_RANGE,ID_COLUMN)
+##    update_arc_table(DATABASE_TABLE,FOREIGN_KEY,FIELD_MAP,lookup_table)
 
 
