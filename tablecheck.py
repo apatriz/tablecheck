@@ -104,20 +104,31 @@ def update_arc_table(filename,foreign_key,field_map,lookup_table):
     fields = [field.name for field in arcpy.ListFields(filename) if field.name in field_map]
     with arcpy.da.UpdateCursor(filename,fields) as cursor:
         for row in cursor:
+            # initialize index to keep track of field position
             index = 0
+            # initialize the row to hold the row values
             new_row = []
             for cell in row:
+                # loop through each column in the row until finding the foreign key id
                 if fields[index] == foreign_key and cell:
+                    # set the value of the foreign key id. 
                     lookup_id = cell
+                # if the foreign key field does not hold a value, break the loop and continue to next row
                 elif fields[index] == foreign_key and not cell:
+                    # row will not be updated
                     new_row = row
                     break
+                # when finding a blank cell, and the lookup id (foreign key) is in the lookup table,
                 if not cell and lookup_id in lookup_table:
-                    lookup_value = field_map[cursor.fields[index]]
-                    if lookup_table[lookup_id][lookup_value]:
-                        cell = lookup_table[lookup_id][lookup_value]
+                    # use the field map to convert the database table field to the equivalent lookup table field
+                    lookup_field = field_map[cursor.fields[index]]
+                    # check if the lookup table contains a record for that id and field
+                    if lookup_table[lookup_id][lookup_field]:
+                        # set the new cell value to the matching lookup table record
+                        cell = lookup_table[lookup_id][lookup_field]
                 new_row.append(cell)
                 index += 1
+            # row needs to be passed as a tuple
             new_row = tuple(new_row)
             cursor.updateRow(new_row)
     print "Finsihed updating table {0}".format(os.path.abspath(filename))
