@@ -91,7 +91,7 @@ def load_dict(filename,field_range,id_column):
         index = 0
         entry = {}
         for cell in row:
-            if index <= len(headers) -1:
+            if index < len(headers):
                 try:
                     val = cell.value.strip()
                 except AttributeError:
@@ -119,7 +119,7 @@ def convert_null_to_none(filename,field_map):
 
 
 def get_exception_category_list(row_dict,exception_field):
-    '''Get list of values for category of fields'''
+    '''Get list of field values for exception fields row'''
     result = []
     for field in row_dict:
         if exception_field in str(field):
@@ -183,9 +183,9 @@ def update_arc_table(filename,foreign_key,field_map,lookup_table):
             # loop through each record in the row, updating where appropriate
             for field in new_row:
                 if "SheetColor" in str(field) and not fill_sheetcolor:
-                        continue
+                    continue
                 elif "LegendColor" in str(field) and not fill_legendcolor:
-                        continue
+                    continue
                 else:
                     # when finding a blank cell, and the lookup id (foreign key) is in the lookup table,
                     if not new_row[field] and lookup_id in lookup_table:
