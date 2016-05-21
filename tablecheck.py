@@ -15,7 +15,7 @@ from collections import OrderedDict
 ###BEGIN PARAMETER INPUT#############################
 
 # Set the Excel file to use as a lookup table
-EXCEL_FILE = r"C:\Users\patrizio\Projects\Monroe_Signs\test\data_v4\Lookup_Table.xlsx"
+EXCEL_FILE = r"C:\Users\patrizio\Projects\Lookup_Processing\Lookup_Table.xlsx"
 
 # Leave this as default, unless header row is not in the first row. Rows are 0-indexed (e.g. if excel table headers are in second row, set this to 1)
 HEADER_ROW = 0 
@@ -24,7 +24,7 @@ HEADER_ROW = 0
 ID_COLUMN = "A"
 
 # Set the database table that will be updated
-DATABASE_TABLE = r"C:\Users\patrizio\Projects\Monroe_Signs\test\data_v4\Monroe_Signs.gdb\Signs"
+DATABASE_TABLE = r"C:\Users\patrizio\Projects\Lookup_Processing\Monroe_Signs_1.gdb\Signs"
 
 #Set the database field name which is foreign key to the lookup table 
 FOREIGN_KEY = "SignType"
@@ -66,17 +66,17 @@ def get_headers(filename,header_row):
     Input:
     filename -> path to excel file
     first_row -> header row is first row. Default: True
-	field_range -> If first_row is False, you can set field range for header row, i.e. "A1:K1".
-		If first_row is False, but field_range is not set, will get headers from first row by default.
+    field_range -> If first_row is False, you can set field range for header row, i.e. "A1:K1".
+        If first_row is False, but field_range is not set, will get headers from first row by default.
 
     Output: list
     """
-    wb = load_workbook(filename=filename,read_only=True)
+    wb = load_workbook(filename=filename)
     ws = wb.active
     headers = []
-	
-	for cell in ws.rows[header_row]:
-		headers.append(cell.value)
+    
+    for cell in ws.rows[header_row]:
+        headers.append(cell.value)
     return headers
 
 
