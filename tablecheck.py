@@ -17,17 +17,16 @@ from collections import OrderedDict
 # Set the Excel file to use as a lookup table
 EXCEL_FILE = r"C:\Users\patrizio\Projects\Monroe_Signs\test\data_v4\Lookup_Table.xlsx"
 
-# Set the Excel table range to extract the table header names.
-# The header names should be equivalent to the field names of the database table (but do not need to have the same name)
-FIELD_NAME_RANGE = "A1:S1"
+# Leave this as default, unless header row is not in the first row. Rows are 0-indexed (e.g. if excel table headers are in second row, set this to 1)
+HEADER_ROW = 0 
 
-# Set the lookup table column which contains the shared id (foreign key)
+# Set the lookup table column letter which is the foreign key to the database
 ID_COLUMN = "A"
 
 # Set the database table that will be updated
 DATABASE_TABLE = r"C:\Users\patrizio\Projects\Monroe_Signs\test\data_v4\Monroe_Signs.gdb\Signs"
 
-#Set the database foreign key field name corresponding to the lookup table id
+#Set the database field name which is foreign key to the lookup table 
 FOREIGN_KEY = "SignType"
 
 # Set the field map.
@@ -62,31 +61,32 @@ def convertindex(func):
     return minus_one
 
 
-def get_headers(filename,field_range):
+def get_headers(filename,header_row):
     """
     Input:
     filename -> path to excel file
-    field_range -> range of cell coordinates for getting headers, e.g. 'A1:S1'
+    first_row -> header row is first row. Default: True
+	field_range -> If first_row is False, you can set field range for header row, i.e. "A1:K1".
+		If first_row is False, but field_range is not set, will get headers from first row by default.
 
     Output: list
     """
     wb = load_workbook(filename=filename,read_only=True)
     ws = wb.active
     headers = []
-
-    for row in ws.iter_rows(range_string=field_range):
-        for cell in row:
-            headers.append(cell.value)
+	
+	for cell in ws.rows[header_row]:
+		headers.append(cell.value)
     return headers
 
 
-def load_dict(filename,field_range,id_column):
+def load_dict(filename, header_row, id_column):
     '''Load a dictionary with the lookup table from excel file'''
     wb = load_workbook(filename=filename,read_only=True)
     ws = wb.active
     res = {}
     get_index = convertindex(column_index_from_string)
-    headers = get_headers(filename,field_range)
+    headers = get_headers(filename,header_row)
     for row in ws.iter_rows(row_offset=1):
         index = 0
         entry = {}
@@ -216,7 +216,7 @@ def test_load_dict(test_entries):
 if __name__ == "__main__":
     
     convert_null_to_none(DATABASE_TABLE,FIELD_MAP)
-    lookup_table = load_dict(EXCEL_FILE,FIELD_NAME_RANGE,ID_COLUMN)
+    lookup_table = load_dict(EXCEL_FILE, HEADER_ROW, ID_COLUMN)
     update_arc_table(DATABASE_TABLE,FOREIGN_KEY,FIELD_MAP,lookup_table)
 
     
